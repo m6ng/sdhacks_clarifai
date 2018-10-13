@@ -1,4 +1,5 @@
 import cv2 as cv
+import os
 from clarifai.rest import ClarifaiApp
 
 cap = cv.VideoCapture(0)
@@ -13,7 +14,7 @@ def captureImageToFile(filename):
 def scale(img):
     return cv.resize(img, None, fx=2, fy=2, interpolation = cv.INTER_CUBIC)
 
-def evalImage(filename):
+def predictImage(filename):
     return model.predict_by_filename(filename)
 
 def printConcepts(frame, response):
@@ -24,11 +25,12 @@ def printConcepts(frame, response):
 while (True):
     frame = captureImageToFile("frame.jpg")
     res = scale(frame)
-    response = evalImage("frame.jpg")
+    response = predictImage("frame.jpg")
     printConcepts(res, response)
 
     cv.imshow("webcam", res)
     if (cv.waitKey(1) == 27):
         break
 
+os.remove("frame.jpg")
 cv.destroyAllWindows()
