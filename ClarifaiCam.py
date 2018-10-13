@@ -1,14 +1,17 @@
-import cv2
+import cv2 as cv
 from clarifai.rest import ClarifaiApp
 
-cap = cv2.VideoCapture(0)
+cap = cv.VideoCapture(0)
 app = ClarifaiApp(api_key="6159ef1a7d5d43dcb85ed1cfd7670e4e")
 model = app.public_models.general_model
 
 def captureImageToFile(filename):
     ret, frame = cap.read()
-    cv2.imwrite(filename, frame)
-    return frame
+    cv.imwrite(filename, frame)
+    return frame 
+
+def scale(img):
+    return cv.resize(img, None, fx=2, fy=2, interpolation = cv.INTER_CUBIC)
 
 def evalImage(filename):
     return model.predict_by_filename(filename)
@@ -20,11 +23,12 @@ def printConcepts(frame, response):
 
 while (True):
     frame = captureImageToFile("frame.jpg")
+    res = scale(frame)
     response = evalImage("frame.jpg")
-    printConcepts(frame, response)
+    printConcepts(res, response)
 
-    cv2.imshow("webcam", frame)
-    if (cv2.waitKey(1) == 27):
+    cv.imshow("webcam", res)
+    if (cv.waitKey(1) == 27):
         break
 
-cv2.destroyAllWindows()
+cv.destroyAllWindows()
