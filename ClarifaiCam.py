@@ -23,8 +23,10 @@ def printConcepts(frame, response):
     text = ""
     for i in range(5):
         text += concepts[i]['name'] + " "
+        print(concepts[i])
     font = cv.FONT_HERSHEY_SIMPLEX
     cv.putText(frame, text, (50, 50), font, 2, (0, 0, 0), 2)
+    print("")
 
 current_milli_time = lambda: int(round(time.time() * 1000))
 
