@@ -39,9 +39,12 @@ class ClarifaiPredict:
         while not self.stopped:
             try:
                 prediction = self.model.predict_by_filename(self.filename)
+                self.concepts = prediction["outputs"][0]["data"]["concepts"]
+                for i in range(5):
+                    print(self.concepts[i])
+                print("")
             except (clarifai.errors.ApiError):
                 continue
-            self.concepts = prediction["outputs"][0]["data"]["concepts"]
 
     def stop(self):
         self.stopped = True
@@ -63,10 +66,8 @@ class FrameDrawer():
                 text = ""
                 for i in range(5):
                     text += self.concepts[i]['name'] + " "
-                    print(self.concepts[i])
                 font = cv.FONT_HERSHEY_SIMPLEX
-                cv.putText(self.img, text, (50, 50), font, 2, (0, 0, 0), 2)
-                print("")
+                cv.putText(self.img, text, (50, 50), font, 2, (255, 100, 50), 2)
 
             cv.imshow("Display", self.img)
             if (cv.waitKey(1) == ord("q")):
