@@ -2,15 +2,23 @@ import cv2 as cv
 import os
 import time
 from clarifai.rest import ClarifaiApp
+from PyQt5.QtWidgets import QApplication, QMainWindow
+
+
+app1 = QApplication([])
+win = QMainWindow()
+
 
 cap = cv.VideoCapture(0)
 app = ClarifaiApp(api_key="6159ef1a7d5d43dcb85ed1cfd7670e4e")
+
 model = app.public_models.general_model
+
 
 def captureImageToFile(filename):
     ret, frame = cap.read()
     cv.imwrite(filename, frame)
-    return frame 
+    return frame
 
 def scale(img):
     return cv.resize(img, None, fx=2, fy=2, interpolation = cv.INTER_CUBIC)
@@ -45,6 +53,7 @@ while (True):
 
     if (cv.waitKey(1) == ord("q")):
         break
-    
+
 
 cv.destroyAllWindows()
+app1.exit(app1.exec_())
