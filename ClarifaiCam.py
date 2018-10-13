@@ -41,6 +41,7 @@ lastTime = current_milli_time()
 while (True):
     if (lastTime + 5000 > current_milli_time()):
         update()
+        lastTime = current_milli_time()
 
     if (cv.waitKey(1) == ord("q")):
         break
