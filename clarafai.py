@@ -71,15 +71,16 @@ class Ui_Dialog(object):
 
     def retranslateUi(self, Dialog):
         _translate = QtCore.QCoreApplication.translate
-        
+
         Dialog.setWindowTitle(_translate("Dialog", "Dialog"))
-
-
+        
+        self.label.setText(_translate("Dialog", "Image2"))
         self.label_2.setText(_translate("Dialog", "Image2"))
         self.label_4.setText(_translate("Dialog", "Image1"))
         self.label_3.setText(_translate("Dialog", "Image3"))
         self.label_5.setText(_translate("Dialog", "Image5"))
         self.label_6.setText(_translate("Dialog", "Image6"))
+
         self.label_7.setText(_translate("Dialog", "Top Searches"))
 
 
