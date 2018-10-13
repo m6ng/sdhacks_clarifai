@@ -13,7 +13,7 @@ def captureImageToFile(filename):
     return frame 
 
 def scale(img):
-    return cv.resize(img, None, fx=2, fy=2, interpolation = cv.INTER_CUBIC)
+    return cv.resize(img, None, fx=1, fy=1, interpolation = cv.INTER_CUBIC)
 
 def predictImage(filename):
     return model.predict_by_filename(filename)
@@ -25,7 +25,7 @@ def printConcepts(frame, response):
         text += concepts[i]['name'] + " "
         print(concepts[i])
     font = cv.FONT_HERSHEY_SIMPLEX
-    cv.putText(frame, text, (50, 50), font, 2, (0, 0, 0), 2)
+    cv.putText(frame, text, (0, 100), font, 1, (200, 0, 0), 2)
     print("")
 
 current_milli_time = lambda: int(round(time.time() * 1000))
