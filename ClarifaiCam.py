@@ -10,11 +10,11 @@ class FrameGetter():
         self.cap = cv.VideoCapture(src)
         (grabbed, self.frame) = self.cap.read()
         self.stopped = False
-    
+
     def start(self):
         Thread(target=self.get, args=()).start()
         return self
-    
+
     def get(self):
         while not self.stopped:
             (grabbed, self.frame) = self.cap.read()
@@ -30,11 +30,11 @@ class ClarifaiPredict:
         self.filename = filename
         self.stopped = False
         self.concepts = None
-    
+
     def start(self):
         Thread(target=self.predict, args=()).start()
         return self
-    
+
     def predict(self):
         while not self.stopped:
             try:
@@ -51,9 +51,9 @@ class ClarifaiPredict:
 
 class FrameDrawer():
     def __init__(self, frame, concepts):
-        self.frame = frame 
+        self.frame = frame
         self.stopped = False
-    
+
     def start(self):
         Thread(target=self.draw, args=()).start()
         return self
@@ -72,7 +72,7 @@ class FrameDrawer():
             cv.imshow("Display", self.img)
             if (cv.waitKey(1) == ord("q")):
                 self.stopped = True
-    
+
     def stop(self):
         self.stopped = True
 
@@ -87,7 +87,7 @@ def main(source=0, filename="frame.jpg"):
             clarifaiPredict.stop()
             frameDrawer.stop()
             break
-        
+
         frameDrawer.frame = frameGetter.frame
         frameDrawer.concepts = clarifaiPredict.concepts
 
