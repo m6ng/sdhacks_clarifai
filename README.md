@@ -1,1 +1,1 @@
-# clarifai-python-pt2
+# sdhacks_clarifai
