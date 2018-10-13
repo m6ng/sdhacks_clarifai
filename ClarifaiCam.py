@@ -1,59 +1,96 @@
 import cv2 as cv
 import os
-import time
+from threading import Thread
+import clarifai
 from clarifai.rest import ClarifaiApp
-from PyQt5.QtWidgets import QApplication, QMainWindow
 
+class FrameGetter():
+    def __init__(self, src=0, filename="frame.jpg"):
+        self.filename = filename
+        self.cap = cv.VideoCapture(src)
+        (grabbed, self.frame) = self.cap.read()
+        self.stopped = False
 
-app1 = QApplication([])
-win = QMainWindow()
+    def start(self):
+        Thread(target=self.get, args=()).start()
+        return self
 
+    def get(self):
+        while not self.stopped:
+            (grabbed, self.frame) = self.cap.read()
+            cv.imwrite(self.filename, self.frame)
 
-cap = cv.VideoCapture(0)
-app = ClarifaiApp(api_key="6159ef1a7d5d43dcb85ed1cfd7670e4e")
+    def stop(self):
+        self.stopped = True
 
-model = app.public_models.general_model
+class ClarifaiPredict:
+    def __init__(self, filename):
+        self.app = ClarifaiApp(api_key="6159ef1a7d5d43dcb85ed1cfd7670e4e")
+        self.model = self.app.public_models.general_model
+        self.filename = filename
+        self.stopped = False
+        self.concepts = None
 
+    def start(self):
+        Thread(target=self.predict, args=()).start()
+        return self
 
-def captureImageToFile(filename):
-    ret, frame = cap.read()
-    cv.imwrite(filename, frame)
-    return frame
+    def predict(self):
+        while not self.stopped:
+            try:
+                prediction = self.model.predict_by_filename(self.filename)
+            except (clarifai.errors.ApiError):
+                continue
+            self.concepts = prediction["outputs"][0]["data"]["concepts"]
 
-def scale(img):
-    return cv.resize(img, None, fx=2, fy=2, interpolation = cv.INTER_CUBIC)
+    def stop(self):
+        self.stopped = True
 
-def predictImage(filename):
-    return model.predict_by_filename(filename)
+class FrameDrawer():
+    def __init__(self, frame, concepts):
+        self.frame = frame
+        self.stopped = False
 
-def printConcepts(frame, response):
-    concepts = response["outputs"][0]["data"]["concepts"]
-    text = ""
-    for i in range(5):
-        text += concepts[i]['name'] + " "
-    font = cv.FONT_HERSHEY_SIMPLEX
-    cv.putText(frame, text, (50, 50), font, 2, (0, 0, 0), 2)
+    def start(self):
+        Thread(target=self.draw, args=()).start()
+        return self
 
-current_milli_time = lambda: int(round(time.time() * 1000))
+    def draw(self):
+        while not self.stopped:
+            self.img = cv.resize(self.frame, None, fx=2, fy=2)
 
-def update():
-    frame = captureImageToFile("frame.jpg")
-    res = scale(frame)
-    response = predictImage("frame.jpg")
-    printConcepts(res, response)
+            if (self.concepts != None):
+                text = ""
+                for i in range(5):
+                    text += self.concepts[i]['name'] + " "
+                    print(self.concepts[i])
+                font = cv.FONT_HERSHEY_SIMPLEX
+                cv.putText(self.img, text, (50, 50), font, 2, (0, 0, 0), 2)
+                print("")
 
-    cv.imshow("webcam", res)
-    os.remove("frame.jpg")
+            cv.imshow("Display", self.img)
+            if (cv.waitKey(1) == ord("q")):
+                self.stopped = True
 
-lastTime = current_milli_time()
-while (True):
-    if (lastTime + 5000 > current_milli_time()):
-        update()
-        lastTime = current_milli_time()
+    def stop(self):
+        self.stopped = True
 
-    if (cv.waitKey(1) == ord("q")):
-        break
+def main(source=0, filename="frame.jpg"):
+    frameGetter = FrameGetter(source, filename).start()
+    clarifaiPredict = ClarifaiPredict(filename).start()
+    frameDrawer = FrameDrawer(frameGetter.frame, clarifaiPredict.concepts).start()
 
+    while (True):
+        if (frameGetter.stopped or clarifaiPredict.stopped or frameDrawer.stopped):
+            frameGetter.stop()
+            clarifaiPredict.stop()
+            frameDrawer.stop()
+            break
 
+        frameDrawer.frame = frameGetter.frame
+        frameDrawer.concepts = clarifaiPredict.concepts
+
+main()
+
+os.remove("frame.jpg")
 cv.destroyAllWindows()
-app1.exit(app1.exec_())
