@@ -5,6 +5,9 @@ from threading import Thread
 import clarifai
 from clarifai.rest import ClarifaiApp
 
+isConfirmed = False
+isPredicted = False
+
 class FrameGetter():
     def __init__(self, src=0, filename="frame.jpg"):
         self.filename = filename
@@ -38,14 +41,17 @@ class ClarifaiPredict:
 
     def predict(self):
         while not self.stopped:
-            try:
-                prediction = self.model.predict_by_filename(self.filename)
-                self.concepts = prediction["outputs"][0]["data"]["concepts"]
-                for concept in self.concepts:
-                    print(concept)
-                print("")
-            except (clarifai.errors.ApiError):
-                continue
+            global isPredicted
+            if (isConfirmed and not isPredicted):
+                try:
+                    prediction = self.model.predict_by_filename(self.filename)
+                    self.concepts = prediction["outputs"][0]["data"]["concepts"]
+                    for concept in self.concepts:
+                        print(concept)
+                    print("")
+                except (clarifai.errors.ApiError):
+                    continue
+                isPredicted = True
 
     def stop(self):
         self.stopped = True
@@ -61,10 +67,16 @@ class FrameDrawer():
 
     def draw(self):
         while not self.stopped:
-            self.img = cv.resize(self.frame, None, fx=1, fy=1)
-            height = 500
-            width = 1000
-            textDisplay = np.zeros((height,width,3), np.uint8)
+            global isConfirmed
+            if (not isConfirmed):
+                self.img = cv.resize(self.frame, None, fx=1, fy=1)
+                height = 500
+                width = 1000
+                textDisplay = np.zeros((height,width,3), np.uint8)
+                
+                cv.imshow("MAIN", self.img)
+                cv.moveWindow("MAIN", 0, 0)
+                cv.resizeWindow("MAIN", 1000, 500)
 
             if (self.concepts != None):
                 for i in range(len(self.concepts)):
@@ -77,16 +89,15 @@ class FrameDrawer():
                     else:
                         cv.putText(textDisplay, text, (500, 30 + 50 * (i - 10)), font, 1, (255, 255, 255), 2)
 
-            cv.imshow("MAIN", self.img)
-            cv.moveWindow("MAIN", 0, 0)
-            cv.resizeWindow("MAIN", 1000, 500)
-
             cv.imshow("CONCEPTS", textDisplay)
             cv.moveWindow("CONCEPTS", 0, 500)
             cv.resizeWindow("CONCEPTS", 1000, 500)
 
-            if (cv.waitKey(1) == ord("q")):
-                self.stopped = True
+            key = cv.waitKey(1)
+            if (key == ord("c")):
+                isConfirmed = True
+            if (key == ord("q")):
+                self.stop()
 
     def stop(self):
         self.stopped = True
