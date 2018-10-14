@@ -77,19 +77,18 @@ class FrameDrawer():
         while not self.stopped:
             global isConfirmed
             if (not isConfirmed):
-                self.webcamUpdate()
-
-            self.conceptsDisplay()
+                self.displayWebcam()
+            self.displayConcepts()
+            self.displayGallery("img")
+            self.handleInput()
             
-            
-
-    def webcamUpdate(self):
+    def displayWebcam(self):
         self.img = cv.resize(self.frame, None, fx=1, fy=1)
         cv.imshow("MAIN", self.img)
         cv.moveWindow("MAIN", 0, 0)
         cv.resizeWindow("MAIN", 1000, 500)
 
-    def conceptsDisplay(self):
+    def displayConcepts(self):
         height = 500
         width = 1000
         textDisplay = np.zeros((height,width,3), np.uint8)
@@ -107,10 +106,33 @@ class FrameDrawer():
         cv.imshow("CONCEPTS", textDisplay)
         cv.moveWindow("CONCEPTS", 0, 500)
         cv.resizeWindow("CONCEPTS", 1000, 500)
+    
+    def displayGallery(self, directory):
+        numFiles = len([f for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f)) and f[0] != '.'])
+        if (numFiles == 0):
+            return
+        elif (numFiles == 1):
+            return
+        elif (numFiles == 2):
+
+            for i in range(len(os.listdir(directory))):
+                filename = os.listdir(directory)[i]
+                img = cv.imread(filename)
+                try:
+                    cv.imshow(filename, img)
+                    cv.moveWindow(filename, 500 + 500 * i, 0)
+                except (cv.error):
+                    continue
+
+        elif (numFiles == 3):
+            return
+        elif (numFiles == 4):
+            return
 
     def handleInput(self):
         key = cv.waitKey(1)
         if (key == ord("c")):
+            global isConfirmed
             isConfirmed = True
         if (key == ord("r")):
             isConfirmed = False
@@ -123,62 +145,91 @@ class FrameDrawer():
         self.stopped = True
 
 class ImageDiscovery:
-    def start(self, searchTerms, concepts):
-        Thread(target=self.performImageDiscovery, args=(searchTerms, concepts)).start()
+    def __init__(self):
+        self.concepts = None
+        self.stopped = False
+
+    def start(self):
+        Thread(target=self.performImageDiscovery, args=()).start()
         return self
 
-    def performImageDiscovery(self, searchTerms, concepts):
-        self.downloadImgFromRanking(self.clarifaiSearch(self.urlLookup(searchTerms), concepts), "img")
+    def performImageDiscovery(self):
+        while (not self.stopped):
+            global isConfirmed
+            if (isConfirmed == True and self.concepts != None):
+                self.concepts = self.concepts[0:5]
+                self.downloadImgFromRanking(self.clarifaiSearch(self.urlLookup(self.concepts), self.concepts), "img")
+                isConfirmed = False
+                global isPredicted
+                isPredicted = False
 
     def get_image_urls_fr_gs(self, query_key):
-        query_key = query_key.replace(' ','+')
+        query_key.replace(' ','+')
         tgt_url = 'https://www.google.com.sg/search?q={}&tbm=isch&tbs=sbd:0'.format(query_key)
-        r = requests.get(tgt_url, headers = headers)
-        urllist = [n for n in re.findall('"ou":"([a-zA-Z0-9_./:-]+.(?:jpg|jpeg|png))",', r.text)] 
+        try:
+            r = requests.get(tgt_url, headers = headers)
+        except (requests.exceptions.ConnectionError):
+            return None
+        urllist = [n for n in re.findall('"ou":"([a-zA-Z0-9_./:-]+.(?:jpg|jpeg|png))",', r.text)]
         return urllist
 
-    def urlLookup(self, searchTerms):
+    def urlLookup(self, concepts):
         urlList = []
-        for term in searchTerms:
-            rawUrlList = self.get_image_urls_fr_gs(term)
-            for i in range(min(len(rawUrlList), 4)):
-                urlList.append(rawUrlList[i])
+        for concept in concepts:
+            conceptName = concept["name"]
+            rawUrlList = self.get_image_urls_fr_gs(conceptName)
+            if (rawUrlList != None):
+                for i in range(min(len(rawUrlList), 1)):
+                    print(rawUrlList[i])
+                    urlList.append(rawUrlList[i])
         return urlList
 
     def clarifaiSearch(self, urls, concepts):
+        conceptsName = []
+        for concept in concepts:
+            conceptsName.append(concept["name"])
         imgs = []
         for url in urls:
             imgs.append(ClImage(url=url, allow_dup_url=True))
         global app
-        app.inputs.bulk_create_images(imgs)
-        ranking = app.inputs.search_by_predicted_concepts(concepts=concepts, raw=True)
+        creation = app.inputs.bulk_create_images(imgs)
+        print(creation)
+        ranking = app.inputs.search_by_predicted_concepts(concepts=conceptsName, raw=True)
+        print(ranking)
         return ranking
 
     def downloadImgFromRanking(self, ranking, directory):
-        urls = []
         hits = ranking["hits"]
-        for i in range(min(len(hits), 5)):
-            urls.append(hits[i]["input"]["data"]["image"]["url"])
-        for url in urls:
+        for i in range(min(len(hits), 4)):
+            url = hits[i]["input"]["data"]["image"]["url"]
+            print(url)
             filename = url.split("/")[-1]
             r = requests.get(url)
             with open(directory + "/" + filename,'wb') as f:
                 f.write(r.content)
 
+        print("EVERYTHING IS FINISHED!!!")
+
+    def stop(self):
+        self.stopped = True
+
 def main(source=0, filename="frame.jpg"):
     frameGetter = FrameGetter(source, filename).start()
     clarifaiPredict = ClarifaiPredict(filename).start()
     frameDrawer = FrameDrawer(frameGetter.frame, clarifaiPredict.concepts).start()
+    imageDiscovery = ImageDiscovery().start()
 
     while (True):
-        if (frameGetter.stopped or clarifaiPredict.stopped or frameDrawer.stopped):
+        if (frameGetter.stopped or clarifaiPredict.stopped or frameDrawer.stopped or imageDiscovery.stopped):
             frameGetter.stop()
             clarifaiPredict.stop()
             frameDrawer.stop()
+            imageDiscovery.stop()
             break
 
         frameDrawer.frame = frameGetter.frame
         frameDrawer.concepts = clarifaiPredict.concepts
+        imageDiscovery.concepts = clarifaiPredict.concepts
 
 main()
 
