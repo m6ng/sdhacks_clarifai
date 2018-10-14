@@ -1,8 +1,16 @@
 import cv2 as cv
+import numpy as np
 import os
 from threading import Thread
 import clarifai
 from clarifai.rest import ClarifaiApp
+
+mainWindow = cv.namedWindow("MAIN", flags=cv.WINDOW_KEEPRATIO | cv.WINDOW_GUI_EXPANDED)
+cv.moveWindow("MAIN", 0, 0)
+cv.resizeWindow("MAIN", 500, 500)
+conceptsWindow = cv.namedWindow("CONCEPTS", flags=cv.WINDOW_KEEPRATIO | cv.WINDOW_GUI_EXPANDED)
+cv.moveWindow("CONCEPTS", 0, 500)
+cv.resizeWindow("CONCEPTS", 500, 500)
 
 class FrameGetter():
     def __init__(self, src=0, filename="frame.jpg"):
@@ -29,7 +37,7 @@ class ClarifaiPredict:
         self.model = self.app.public_models.general_model
         self.filename = filename
         self.stopped = False
-        self.concepts = None
+        self.prediction = None
 
     def start(self):
         Thread(target=self.predict, args=()).start()
@@ -38,10 +46,11 @@ class ClarifaiPredict:
     def predict(self):
         while not self.stopped:
             try:
-                prediction = self.model.predict_by_filename(self.filename)
-                self.concepts = prediction["outputs"][0]["data"]["concepts"]
+                self.prediction = self.model.predict_by_filename(self.filename)
+                concepts = self.prediction['outputs'][0]['data']['concepts']
                 for i in range(5):
-                    print(self.concepts[i])
+                    concept = concepts[i]
+                    print(concept["name"], concept["value"])
                 print("")
             except (clarifai.errors.ApiError):
                 continue
@@ -50,8 +59,9 @@ class ClarifaiPredict:
         self.stopped = True
 
 class FrameDrawer():
-    def __init__(self, frame, concepts):
+    def __init__(self, frame, prediction):
         self.frame = frame
+        self.prediction = prediction
         self.stopped = False
 
     def start(self):
@@ -60,16 +70,22 @@ class FrameDrawer():
 
     def draw(self):
         while not self.stopped:
-            self.img = cv.resize(self.frame, None, fx=2, fy=2)
+            self.img = cv.resize(self.frame, None, fx=1, fy=1)
+            height = 500
+            width = 1000
+            textDisplay = np.zeros((height,width,3), np.uint8)
 
-            if (self.concepts != None):
-                text = ""
+            if (self.prediction != None):
+                concepts = self.prediction['outputs'][0]['data']['concepts']
                 for i in range(5):
-                    text += self.concepts[i]['name'] + " "
-                font = cv.FONT_HERSHEY_SIMPLEX
-                cv.putText(self.img, text, (50, 50), font, 2, (255, 100, 50), 2)
+                    concept = concepts[i]
+                    text = concept["name"] + " " + concept["value"]
+                    print(text)
+                    font = cv.FONT_HERSHEY_SIMPLEX
+                    cv.putText(textDisplay, text, (50, 100 + i * 50), font, 1, (255, 255, 255), 2)
 
-            cv.imshow("Display", self.img)
+            cv.imshow("MAIN", self.img)
+            cv.imshow("CONCEPTS", textDisplay)
             if (cv.waitKey(1) == ord("q")):
                 self.stopped = True
 
@@ -79,7 +95,7 @@ class FrameDrawer():
 def main(source=0, filename="frame.jpg"):
     frameGetter = FrameGetter(source, filename).start()
     clarifaiPredict = ClarifaiPredict(filename).start()
-    frameDrawer = FrameDrawer(frameGetter.frame, clarifaiPredict.concepts).start()
+    frameDrawer = FrameDrawer(frameGetter.frame, clarifaiPredict.prediction).start()
 
     while (True):
         if (frameGetter.stopped or clarifaiPredict.stopped or frameDrawer.stopped):
@@ -89,7 +105,7 @@ def main(source=0, filename="frame.jpg"):
             break
 
         frameDrawer.frame = frameGetter.frame
-        frameDrawer.concepts = clarifaiPredict.concepts
+        frameDrawer.perdiction = clarifaiPredict.prediction
 
 main()
 
