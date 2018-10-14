@@ -1,12 +1,17 @@
+from PIL import Image
 import re
 import requests
 import cv2 as cv
 import numpy as np
-import os
+import os, glob
 from threading import Thread
 import clarifai
 from clarifai.rest import ClarifaiApp
 from clarifai.rest import Image as ClImage
+
+files = glob.glob('./img/*')
+for f in files:
+    os.remove(f)
 
 app = ClarifaiApp(api_key="105fbb4fbd4046208e8c76191b470eb4")
 
@@ -108,26 +113,12 @@ class FrameDrawer():
         cv.resizeWindow("CONCEPTS", 1000, 500)
     
     def displayGallery(self, directory):
-        numFiles = len([f for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f)) and f[0] != '.'])
-        if (numFiles == 0):
-            return
-        elif (numFiles == 1):
-            return
-        elif (numFiles == 2):
-
-            for i in range(len(os.listdir(directory))):
-                filename = os.listdir(directory)[i]
-                img = cv.imread(filename)
-                try:
-                    cv.imshow(filename, img)
-                    cv.moveWindow(filename, 500 + 500 * i, 0)
-                except (cv.error):
-                    continue
-
-        elif (numFiles == 3):
-            return
-        elif (numFiles == 4):
-            return
+        for i in range(len(os.listdir(directory))):
+            filename = os.listdir(directory)[i]
+            path = directory + "/" + filename
+            image = Image.open(path)
+            img = cv.cvtColor(np.asarray(image), cv.COLOR_RGB2BGR)
+            cv.imshow(filename, img)
 
     def handleInput(self):
         key = cv.waitKey(1)
@@ -157,7 +148,10 @@ class ImageDiscovery:
         while (not self.stopped):
             global isConfirmed
             if (isConfirmed == True and self.concepts != None):
-                self.concepts = self.concepts[0:5]
+                files = glob.glob('./img/*')
+                for f in files:
+                    os.remove(f)
+                # self.concepts = self.concepts[0:10]
                 self.downloadImgFromRanking(self.clarifaiSearch(self.urlLookup(self.concepts), self.concepts), "img")
                 isConfirmed = False
                 global isPredicted
@@ -236,3 +230,7 @@ main()
 if (os.path.isfile("frame.jpg")):
     os.remove("frame.jpg")
 cv.destroyAllWindows()
+
+files = glob.glob('./img/*')
+for f in files:
+    os.remove(f)
