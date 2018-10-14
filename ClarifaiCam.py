@@ -28,6 +28,7 @@ isPredicted = False
 imageDisplayNum = 0
 isWebcamMode = True
 isConceptsComputed = False
+isGalleryComplete = False
 
 frameGetter = None
 clarifaiPredict = None
@@ -102,12 +103,14 @@ class FrameDrawer():
         while not self.stopped:
             global isConfirmed
             global isWebcamMode
+            global isGalleryComplete
             if (not isConfirmed and isWebcamMode):
                 self.displayWebcam()
             if (not isWebcamMode):
                 self.displayMain()
             self.displayConcepts()
-            self.displayGallery("img")
+            if (isGalleryComplete):
+                self.displayGallery("img")
             self.handleInput()
             
     def displayWebcam(self):
@@ -156,6 +159,8 @@ class FrameDrawer():
         global isWebcamMode
         global isMainSwitched
         global imageDisplayNum
+        global isGalleryComplete
+        global isConfirmed
         global isConceptsComputed
 
         key = cv.waitKey(1)
@@ -166,22 +171,20 @@ class FrameDrawer():
             if (imageDisplayNum - 1 >= 0):
                 imageDisplayNum -= 1
         if (key == ord("n")):
-            global imageDisplayNum
             filename = os.listdir("img")[imageDisplayNum]
+            imageDisplayNum = 0
             path = "img" + "/" + filename
             image = Image.open(path)
             image_data = cv.cvtColor(np.asarray(image), cv.COLOR_RGB2BGR) 
             newPath = "main/" + filename
             cv.imwrite(newPath, image_data)
             self.img = image_data
-            imageDisplayNum = 0
             isMainSwitched = True
             isWebcamMode = False
             clarifaiPredict.setFilename(newPath)
             isConceptsComputed = False
+            isGalleryComplete = False
         if (key == ord("c") and isWebcamMode):
-            global isConfirmed
-            global isGalleryComplete
             isConfirmed = True
             isGalleryComplete = False
         if (key == ord("r")):
@@ -212,7 +215,7 @@ class ImageDiscovery:
                 files = glob.glob('./img/*')
                 for f in files:
                     os.remove(f)
-                self.concepts = self.concepts[0:2]
+                self.concepts = self.concepts[0:5]
                 self.downloadImgs(self.urlLookup(self.concepts), "img")
                 print("EVERYTHING IS FINISHED!!!")
                 global isGalleryComplete
