@@ -13,6 +13,10 @@ files = glob.glob('./img/*')
 for f in files:
     os.remove(f)
 
+files = glob.glob('./img/*')
+for f in files:
+    os.remove(f)
+
 app = ClarifaiApp(api_key="105fbb4fbd4046208e8c76191b470eb4")
 
 USER_AGENT = USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36'
@@ -23,6 +27,7 @@ isMainSwitched = False
 isPredicted = False
 imageDisplayNum = 0
 isWebcamMode = True
+isConceptsComputed = False
 
 frameGetter = None
 clarifaiPredict = None
@@ -30,8 +35,8 @@ frameDrawer = None
 imageDiscovery = None
 
 class FrameGetter():
-    def __init__(self, src=0, filename="frame.jpg"):
-        self.filename = filename
+    def __init__(self, src=0):
+        self.filename = "frame.jpg" 
         self.cap = cv.VideoCapture(src)
         (grabbed, self.frame) = self.cap.read()
         self.stopped = False
@@ -49,10 +54,10 @@ class FrameGetter():
         self.stopped = True
 
 class ClarifaiPredict:
-    def __init__(self, filename):
+    def __init__(self):
         global app
         self.model = app.public_models.general_model
-        self.filename = filename
+        self.filename =  "frame.jpg"
         self.stopped = False
         self.concepts = None
 
@@ -74,7 +79,12 @@ class ClarifaiPredict:
                     print("")
                 except (clarifai.errors.ApiError):
                     continue
+                global isConceptsComputed
+                isConceptsComputed = True
                 isPredicted = True
+
+    def setFilename(self, filename):
+        self.filename = filename
 
     def stop(self):
         self.stopped = True
@@ -146,6 +156,8 @@ class FrameDrawer():
         global isWebcamMode
         global isMainSwitched
         global imageDisplayNum
+        global isConceptsComputed
+
         key = cv.waitKey(1)
         if (key == ord("j")):
             if (imageDisplayNum + 1 < len(os.listdir("img"))):
@@ -161,11 +173,12 @@ class FrameDrawer():
             image_data = cv.cvtColor(np.asarray(image), cv.COLOR_RGB2BGR) 
             newPath = "main/" + filename
             cv.imwrite(newPath, image_data)
-            clarifaiPredict.filename = newPath
             self.img = image_data
             imageDisplayNum = 0
             isMainSwitched = True
             isWebcamMode = False
+            clarifaiPredict.setFilename(newPath)
+            isConceptsComputed = False
         if (key == ord("c") and isWebcamMode):
             global isConfirmed
             global isGalleryComplete
@@ -194,7 +207,8 @@ class ImageDiscovery:
         while (not self.stopped):
             global isConfirmed
             global isMainSwitched
-            if ((isConfirmed or isMainSwitched) and self.concepts != None):
+            global isConceptsComputed
+            if ((isConfirmed or isMainSwitched) and self.concepts != None and isConceptsComputed):
                 files = glob.glob('./img/*')
                 for f in files:
                     os.remove(f)
@@ -241,14 +255,14 @@ class ImageDiscovery:
     def stop(self):
         self.stopped = True
 
-def main(source=0, filename="frame.jpg"):
+def main(source=0):
     global frameGetter
     global clarifaiPredict
     global frameDrawer
     global imageDiscovery
 
-    frameGetter = FrameGetter(source, filename).start()
-    clarifaiPredict = ClarifaiPredict(filename).start()
+    frameGetter = FrameGetter(source).start()
+    clarifaiPredict = ClarifaiPredict().start()
     frameDrawer = FrameDrawer(frameGetter.frame, clarifaiPredict.concepts).start()
     imageDiscovery = ImageDiscovery().start()
 
@@ -271,5 +285,9 @@ if (os.path.isfile("frame.jpg")):
 cv.destroyAllWindows()
 
 files = glob.glob('./img/*')
+for f in files:
+    os.remove(f)
+
+files = glob.glob('./main/*')
 for f in files:
     os.remove(f)
