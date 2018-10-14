@@ -19,9 +19,15 @@ USER_AGENT = USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/
 headers = { 'User-Agent': USER_AGENT }
 
 isConfirmed = False
+isMainSwitched = False
 isPredicted = False
 imageDisplayNum = 0
 isWebcamMode = True
+
+frameGetter = None
+clarifaiPredict = None
+frameDrawer = None
+imageDiscovery = None
 
 class FrameGetter():
     def __init__(self, src=0, filename="frame.jpg"):
@@ -56,8 +62,10 @@ class ClarifaiPredict:
 
     def predict(self):
         while not self.stopped:
+            global isConfirmed
+            global isMainSwitched
             global isPredicted
-            if (isConfirmed and not isPredicted):
+            if ((isConfirmed or isMainSwitched) and not isPredicted):
                 try:
                     prediction = self.model.predict_by_filename(self.filename)
                     self.concepts = prediction["outputs"][0]["data"]["concepts"]
@@ -67,8 +75,6 @@ class ClarifaiPredict:
                 except (clarifai.errors.ApiError):
                     continue
                 isPredicted = True
-                global isPictureSwitched
-                isPictureSwitched = True
 
     def stop(self):
         self.stopped = True
@@ -138,6 +144,7 @@ class FrameDrawer():
 
     def handleInput(self):
         global isWebcamMode
+        global isMainSwitched
         global imageDisplayNum
         key = cv.waitKey(1)
         if (key == ord("j")):
@@ -152,11 +159,18 @@ class FrameDrawer():
             path = "img" + "/" + filename
             image = Image.open(path)
             image_data = cv.cvtColor(np.asarray(image), cv.COLOR_RGB2BGR) 
-            self.img = image_data 
+            newPath = "main/" + filename
+            cv.imwrite(newPath, image_data)
+            clarifaiPredict.filename = newPath
+            self.img = image_data
+            imageDisplayNum = 0
+            isMainSwitched = True
             isWebcamMode = False
         if (key == ord("c") and isWebcamMode):
             global isConfirmed
+            global isGalleryComplete
             isConfirmed = True
+            isGalleryComplete = False
         if (key == ord("r")):
             isConfirmed = False
             global isPredicted
@@ -179,13 +193,18 @@ class ImageDiscovery:
     def performImageDiscovery(self):
         while (not self.stopped):
             global isConfirmed
-            if (isConfirmed == True and self.concepts != None):
+            global isMainSwitched
+            if ((isConfirmed or isMainSwitched) and self.concepts != None):
                 files = glob.glob('./img/*')
                 for f in files:
                     os.remove(f)
                 self.concepts = self.concepts[0:2]
                 self.downloadImgs(self.urlLookup(self.concepts), "img")
+                print("EVERYTHING IS FINISHED!!!")
+                global isGalleryComplete
+                isGalleryComplete = True
                 isConfirmed = False
+                isMainSwitched = False
                 global isPredicted
                 isPredicted = False
 
@@ -218,12 +237,16 @@ class ImageDiscovery:
             with open(directory + "/" + filename,'wb') as f:
                 f.write(r.content)
 
-        print("EVERYTHING IS FINISHED!!!")
 
     def stop(self):
         self.stopped = True
 
 def main(source=0, filename="frame.jpg"):
+    global frameGetter
+    global clarifaiPredict
+    global frameDrawer
+    global imageDiscovery
+
     frameGetter = FrameGetter(source, filename).start()
     clarifaiPredict = ClarifaiPredict(filename).start()
     frameDrawer = FrameDrawer(frameGetter.frame, clarifaiPredict.concepts).start()
