@@ -5,12 +5,12 @@ from threading import Thread
 import clarifai
 from clarifai.rest import ClarifaiApp
 
-mainWindow = cv.namedWindow("MAIN", flags=cv.WINDOW_KEEPRATIO | cv.WINDOW_GUI_EXPANDED)
-cv.moveWindow("MAIN", 0, 0)
-cv.resizeWindow("MAIN", 1000, 500)
-conceptsWindow = cv.namedWindow("CONCEPTS", flags=cv.WINDOW_KEEPRATIO | cv.WINDOW_GUI_EXPANDED)
+conceptsWindow = cv.namedWindow("CONCEPTS", flags=cv.WINDOW_KEEPRATIO)
 cv.moveWindow("CONCEPTS", 0, 500)
 cv.resizeWindow("CONCEPTS", 1000, 500)
+mainWindow = cv.namedWindow("MAIN", flags=cv.WINDOW_KEEPRATIO)
+cv.moveWindow("MAIN", 0, 0)
+cv.resizeWindow("MAIN", 1000, 500)
 
 class FrameGetter():
     def __init__(self, src=0, filename="frame.jpg"):
@@ -48,8 +48,8 @@ class ClarifaiPredict:
             try:
                 prediction = self.model.predict_by_filename(self.filename)
                 self.concepts = prediction["outputs"][0]["data"]["concepts"]
-                for i in range(5):
-                    print(self.concepts[i])
+                for concept in self.concepts:
+                    print(concept)
                 print("")
             except (clarifai.errors.ApiError):
                 continue
