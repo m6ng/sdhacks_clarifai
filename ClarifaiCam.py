@@ -20,6 +20,8 @@ headers = { 'User-Agent': USER_AGENT }
 
 isConfirmed = False
 isPredicted = False
+imageDisplayNum = 0
+isWebcamMode = True
 
 class FrameGetter():
     def __init__(self, src=0, filename="frame.jpg"):
@@ -65,6 +67,8 @@ class ClarifaiPredict:
                 except (clarifai.errors.ApiError):
                     continue
                 isPredicted = True
+                global isPictureSwitched
+                isPictureSwitched = True
 
     def stop(self):
         self.stopped = True
@@ -81,14 +85,22 @@ class FrameDrawer():
     def draw(self):
         while not self.stopped:
             global isConfirmed
-            if (not isConfirmed):
+            global isWebcamMode
+            if (not isConfirmed and isWebcamMode):
                 self.displayWebcam()
+            if (not isWebcamMode):
+                self.displayMain()
             self.displayConcepts()
             self.displayGallery("img")
             self.handleInput()
             
     def displayWebcam(self):
         self.img = cv.resize(self.frame, None, fx=1, fy=1)
+        cv.imshow("MAIN", self.img)
+        cv.moveWindow("MAIN", 0, 0)
+        cv.resizeWindow("MAIN", 1000, 500)
+
+    def displayMain(self):
         cv.imshow("MAIN", self.img)
         cv.moveWindow("MAIN", 0, 0)
         cv.resizeWindow("MAIN", 1000, 500)
@@ -114,15 +126,35 @@ class FrameDrawer():
     
     def displayGallery(self, directory):
         for i in range(len(os.listdir(directory))):
-            filename = os.listdir(directory)[i]
-            path = directory + "/" + filename
-            image = Image.open(path)
-            img = cv.cvtColor(np.asarray(image), cv.COLOR_RGB2BGR)
-            cv.imshow(filename, img)
+            img = np.zeros((2000,1000,3), np.uint8)
+            global imageDisplayNum
+            if (i == imageDisplayNum):
+                filename = os.listdir(directory)[i]
+                path = directory + "/" + filename
+                image = Image.open(path)
+                img = cv.cvtColor(np.asarray(image), cv.COLOR_RGB2BGR)
+                cv.putText(img, str(i), (20, 20), cv.FONT_HERSHEY_COMPLEX_SMALL, 1, (255, 0, 255), 2)
+                cv.imshow("BROWSER", img)
 
     def handleInput(self):
+        global isWebcamMode
+        global imageDisplayNum
         key = cv.waitKey(1)
-        if (key == ord("c")):
+        if (key == ord("j")):
+            if (imageDisplayNum + 1 < len(os.listdir("img"))):
+                imageDisplayNum += 1
+        if (key == ord("k")):
+            if (imageDisplayNum - 1 >= 0):
+                imageDisplayNum -= 1
+        if (key == ord("n")):
+            global imageDisplayNum
+            filename = os.listdir("img")[imageDisplayNum]
+            path = "img" + "/" + filename
+            image = Image.open(path)
+            image_data = cv.cvtColor(np.asarray(image), cv.COLOR_RGB2BGR) 
+            self.img = image_data 
+            isWebcamMode = False
+        if (key == ord("c") and isWebcamMode):
             global isConfirmed
             isConfirmed = True
         if (key == ord("r")):
@@ -151,8 +183,8 @@ class ImageDiscovery:
                 files = glob.glob('./img/*')
                 for f in files:
                     os.remove(f)
-                # self.concepts = self.concepts[0:10]
-                self.downloadImgFromRanking(self.clarifaiSearch(self.urlLookup(self.concepts), self.concepts), "img")
+                self.concepts = self.concepts[0:2]
+                self.downloadImgs(self.urlLookup(self.concepts), "img")
                 isConfirmed = False
                 global isPredicted
                 isPredicted = False
@@ -178,25 +210,9 @@ class ImageDiscovery:
                     urlList.append(rawUrlList[i])
         return urlList
 
-    def clarifaiSearch(self, urls, concepts):
-        conceptsName = []
-        for concept in concepts:
-            conceptsName.append(concept["name"])
-        imgs = []
-        for url in urls:
-            imgs.append(ClImage(url=url, allow_dup_url=True))
-        global app
-        creation = app.inputs.bulk_create_images(imgs)
-        print(creation)
-        ranking = app.inputs.search_by_predicted_concepts(concepts=conceptsName, raw=True)
-        print(ranking)
-        return ranking
-
-    def downloadImgFromRanking(self, ranking, directory):
-        hits = ranking["hits"]
-        for i in range(min(len(hits), 4)):
-            url = hits[i]["input"]["data"]["image"]["url"]
-            print(url)
+    def downloadImgs(self, urls, directory):
+        for i in range(min(len(urls), 4)):
+            url = urls[i]
             filename = url.split("/")[-1]
             r = requests.get(url)
             with open(directory + "/" + filename,'wb') as f:
