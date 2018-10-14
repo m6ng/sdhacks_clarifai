@@ -215,7 +215,7 @@ class ImageDiscovery:
                 files = glob.glob('./img/*')
                 for f in files:
                     os.remove(f)
-                self.concepts = self.concepts[0:5]
+                self.concepts = self.concepts[0:20]
                 self.downloadImgs(self.urlLookup(self.concepts), "img")
                 print("EVERYTHING IS FINISHED!!!")
                 global isGalleryComplete
@@ -229,8 +229,10 @@ class ImageDiscovery:
         query_key.replace(' ','+')
         tgt_url = 'https://www.google.com.sg/search?q={}&tbm=isch&tbs=sbd:0'.format(query_key)
         try:
-            r = requests.get(tgt_url, headers = headers)
+            r = requests.get(tgt_url, headers = headers, timeout=10)
         except (requests.exceptions.ConnectionError):
+            return None
+        except (requests.Timeout):
             return None
         urllist = [n for n in re.findall('"ou":"([a-zA-Z0-9_./:-]+.(?:jpg|jpeg|png))",', r.text)]
         return urllist
@@ -241,13 +243,13 @@ class ImageDiscovery:
             conceptName = concept["name"]
             rawUrlList = self.get_image_urls_fr_gs(conceptName)
             if (rawUrlList != None):
-                for i in range(min(len(rawUrlList), 1)):
+                for i in range(min(len(rawUrlList), 2)):
                     print(rawUrlList[i])
                     urlList.append(rawUrlList[i])
         return urlList
 
     def downloadImgs(self, urls, directory):
-        for i in range(min(len(urls), 4)):
+        for i in range(min(len(urls), 10)):
             url = urls[i]
             filename = url.split("/")[-1]
             r = requests.get(url)
