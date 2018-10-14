@@ -147,7 +147,7 @@ class FrameDrawer():
         for i in range(len(os.listdir(directory))):
             img = np.zeros((2000,1000,3), np.uint8)
             global imageDisplayNum
-            if (i == imageDisplayNum):
+            if (i == imageDisplayNum and i > -1 and i < len(os.listdir(directory))):
                 filename = os.listdir(directory)[i]
                 path = directory + "/" + filename
                 image = Image.open(path)
@@ -229,7 +229,7 @@ class ImageDiscovery:
         query_key.replace(' ','+')
         tgt_url = 'https://www.google.com.sg/search?q={}&tbm=isch&tbs=sbd:0'.format(query_key)
         try:
-            r = requests.get(tgt_url, headers = headers, timeout=10)
+            r = requests.get(tgt_url, headers = headers, timeout=5)
         except (requests.exceptions.ConnectionError):
             return None
         except (requests.Timeout):
