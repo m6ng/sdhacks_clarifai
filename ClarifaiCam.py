@@ -67,10 +67,15 @@ class FrameDrawer():
             textDisplay = np.zeros((height,width,3), np.uint8)
 
             if (self.concepts != None):
-                for i in range(5):
-                    text = self.concepts[i]['name'] + " ( " + str(self.concepts[i]['value']) + " )"
-                    font = cv.FONT_HERSHEY_SIMPLEX
-                    cv.putText(textDisplay, text, (50, 70 + 70 * i), font, 1.5, (255, 255, 255), 2)
+                for i in range(len(self.concepts)):
+                    concept = self.concepts[i]
+                    text = concept['name'] + " ( " + str(round(concept['value'], 4)) + " )"
+                    font = cv.FONT_HERSHEY_COMPLEX_SMALL
+
+                    if (i < 10):
+                        cv.putText(textDisplay, text, (30, 30 + 50 * i), font, 1, (255, 255, 255), 2)
+                    else:
+                        cv.putText(textDisplay, text, (500, 30 + 50 * (i - 10)), font, 1, (255, 255, 255), 2)
 
             cv.imshow("MAIN", self.img)
             cv.moveWindow("MAIN", 0, 0)
