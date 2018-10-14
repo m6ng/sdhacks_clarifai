@@ -5,13 +5,6 @@ from threading import Thread
 import clarifai
 from clarifai.rest import ClarifaiApp
 
-conceptsWindow = cv.namedWindow("CONCEPTS", flags=cv.WINDOW_KEEPRATIO)
-cv.moveWindow("CONCEPTS", 0, 500)
-cv.resizeWindow("CONCEPTS", 1000, 500)
-mainWindow = cv.namedWindow("MAIN", flags=cv.WINDOW_KEEPRATIO)
-cv.moveWindow("MAIN", 0, 0)
-cv.resizeWindow("MAIN", 1000, 500)
-
 class FrameGetter():
     def __init__(self, src=0, filename="frame.jpg"):
         self.filename = filename
@@ -80,7 +73,13 @@ class FrameDrawer():
                     cv.putText(textDisplay, text, (50, 70 + 70 * i), font, 1.5, (255, 255, 255), 2)
 
             cv.imshow("MAIN", self.img)
+            cv.moveWindow("MAIN", 0, 0)
+            cv.resizeWindow("MAIN", 1000, 500)
+
             cv.imshow("CONCEPTS", textDisplay)
+            cv.moveWindow("CONCEPTS", 0, 500)
+            cv.resizeWindow("CONCEPTS", 1000, 500)
+
             if (cv.waitKey(1) == ord("q")):
                 self.stopped = True
 
