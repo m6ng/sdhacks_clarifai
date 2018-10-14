@@ -108,7 +108,7 @@ class FrameDrawer():
         cv.moveWindow("CONCEPTS", 0, 500)
         cv.resizeWindow("CONCEPTS", 1000, 500)
 
-    def handleInput():
+    def handleInput(self):
         key = cv.waitKey(1)
         if (key == ord("c")):
             isConfirmed = True
